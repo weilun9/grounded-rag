@@ -34,20 +34,31 @@ def _first_rank(doc_ids: list[str], expected: set[str]) -> int | None:
 
 def eval_retrieval(index: HybridIndex, questions: list[dict], settings: Settings, k: int = 5) -> dict:
     answerable = [q for q in questions if q["answerable"]]
+    penalty = index.rejected_penalty
+    runs = [(mode, mode, penalty) for mode in MODES]
+    if penalty > 0:  # ablation row: the default mode with the rejected-proposal penalty switched off
+        runs.append(("hybrid_rerank (no rejected penalty)", "hybrid_rerank", 0.0))
     report: dict[str, dict] = {}
-    for mode in MODES:
-        ranks = []
-        for q in answerable:
-            hits = index.search(q["question"], mode=mode, top_k=k, candidate_k=settings.candidate_k)
-            ranks.append(_first_rank([h.chunk.doc_id for h in hits], set(q["expected_docs"])))
-        n = len(ranks)
-        report[mode] = {
-            "hit@1": round(sum(r == 1 for r in ranks) / n, 3),
-            f"hit@{k}": round(sum(r is not None for r in ranks) / n, 3),
-            f"mrr@{k}": round(sum(1 / r for r in ranks if r) / n, 3),
-            "misses": [q["id"] for q, r in zip(answerable, ranks) if r is None],
-        }
-    return {"n_questions": len(answerable), "k": k, "modes": report}
+    try:
+        for label, mode, index.rejected_penalty in runs:
+            ranks, rejected_top = [], []
+            for q in answerable:
+                hits = index.search(q["question"], mode=mode, top_k=k, candidate_k=settings.candidate_k)
+                ranks.append(_first_rank([h.chunk.doc_id for h in hits], set(q["expected_docs"])))
+                if hits and hits[0].chunk.status == "rejected":
+                    rejected_top.append(q["id"])
+            n = len(ranks)
+            report[label] = {
+                "hit@1": round(sum(r == 1 for r in ranks) / n, 3),
+                f"hit@{k}": round(sum(r is not None for r in ranks) / n, 3),
+                f"mrr@{k}": round(sum(1 / r for r in ranks if r) / n, 3),
+                "misses": [q["id"] for q, r in zip(answerable, ranks) if r is None],
+                # questions whose top passage comes from a rejected-proposal section
+                "rejected@1": rejected_top,
+            }
+    finally:
+        index.rejected_penalty = penalty
+    return {"n_questions": len(answerable), "k": k, "rejected_penalty": penalty, "modes": report}
 
 
 def eval_e2e(pipeline: RAGPipeline, questions: list[dict]) -> dict:
@@ -91,9 +102,12 @@ def to_markdown(retrieval: dict | None, e2e: dict | None, meta: dict) -> str:
     if retrieval:
         k = retrieval["k"]
         lines += [f"## Retrieval ({retrieval['n_questions']} answerable questions, doc-level)", "",
-                  f"| Mode | Hit@1 | Hit@{k} | MRR@{k} | Misses |", "|---|---|---|---|---|"]
+                  f"Rejected-proposal penalty: {retrieval.get('rejected_penalty', 0.0)}. *Top from rejected*: questions "
+                  + "whose first passage comes from a rejected-ideas section.", "",
+                  f"| Mode | Hit@1 | Hit@{k} | MRR@{k} | Misses | Top from rejected |", "|---|---|---|---|---|---|"]
         for mode, m in retrieval["modes"].items():
-            lines.append(f"| {mode} | {m['hit@1']:.3f} | {m[f'hit@{k}']:.3f} | {m[f'mrr@{k}']:.3f} | {', '.join(m['misses']) or '-'} |")
+            lines.append(f"| {mode} | {m['hit@1']:.3f} | {m[f'hit@{k}']:.3f} | {m[f'mrr@{k}']:.3f} | "
+                         f"{', '.join(m['misses']) or '-'} | {', '.join(m.get('rejected@1', [])) or '-'} |")
         lines.append("")
     if e2e:
         lines += [f"## End-to-end (LLM: `{meta['llm']}`, mode: `{meta['retrieval_mode']}`)", "",

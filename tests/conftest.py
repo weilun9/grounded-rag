@@ -37,6 +37,28 @@ Limit all lines to a maximum of 79 characters. For docstrings or comments the li
 ]
 
 
+# The answer lives in "Specification"; a rejected spelling sits under "Rejected Ideas" one heading level down
+# and repeats the question's wording more closely, so it wins on raw relevance scores.
+REJECTED_DOC = Document("PEP 9001", "PEP 9001 – Inline Assignment", """Specification
+=============
+
+Use the walrus operator ``:=`` to assign a value to a name inside an expression, such as a while loop test.
+
+Rejected Ideas
+==============
+
+Using ``as`` in conditions
+--------------------------
+
+Writing ``if value as name:`` to assign a value inside an if condition was proposed and turned down.
+
+Deferred Reference Counting
+===========================
+
+A design term for reference counting that is postponed until collection, which is part of the proposal.
+""", "pep-9001.rst")
+
+
 class OverlapReranker:
     """Score = number of shared query tokens minus 2, so a passage with no overlap scores below the default gate."""
 
@@ -53,6 +75,16 @@ def chunks():
 @pytest.fixture
 def index(chunks):
     return HybridIndex(chunks, DeterministicFakeEmbedding(size=64), persist_dir=None, reranker=OverlapReranker())
+
+
+@pytest.fixture
+def rejected_chunks():
+    return chunk_documents([REJECTED_DOC, *DOCS], chunk_size=300, chunk_overlap=0)
+
+
+def make_index(chunks, rejected_penalty: float = 0.0) -> HybridIndex:
+    return HybridIndex(chunks, DeterministicFakeEmbedding(size=64), persist_dir=None, reranker=OverlapReranker(),
+                       rejected_penalty=rejected_penalty)
 
 
 @pytest.fixture

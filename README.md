@@ -19,19 +19,30 @@ question ──► retrieve ──► grade ──(relevant)──► generate �
 
 ## Results
 
-45 questions (35 answerable, 10 unanswerable) over 29 documents / 1,571 chunks, run on a laptop
-(RTX 4060, 8 GB). Full reports in [`eval/results/`](eval/results).
+45 questions (35 answerable, 10 unanswerable) over 29 documents / 1,571 chunks. End-to-end runs on a laptop
+(RTX 4060, 8 GB); the retrieval table comes from the CI runner (CPU), which reproduced the laptop's
+retrieval numbers exactly before the rejected-proposal change. Full reports in [`eval/results/`](eval/results).
 
-**Retrieval ablation** (doc-level, top 5; embeddings `bge-small-en-v1.5`, reranker `ms-marco-MiniLM-L-6-v2`)
+**Retrieval ablation** (doc-level, top 5; embeddings `bge-small-en-v1.5`, reranker `ms-marco-MiniLM-L-6-v2`;
+the two hybrid modes demote passages from rejected-proposal sections, see Design decisions)
 
-| Mode | Hit@1 | Hit@5 | MRR@5 |
-|---|---|---|---|
-| Dense vector only | 0.857 | 0.943 | 0.890 |
-| BM25 only | 0.800 | **1.000** | 0.883 |
-| Hybrid (RRF) | 0.886 | **1.000** | 0.930 |
-| **Hybrid + cross-encoder rerank** (default) | **0.914** | 0.971 | **0.936** |
+| Mode | Hit@1 | Hit@5 | MRR@5 | Top passage from a rejected section |
+|---|---|---|---|---|
+| Dense vector only | 0.857 | 0.943 | 0.890 | 1 |
+| BM25 only | 0.800 | **1.000** | 0.883 | 2 |
+| Hybrid (RRF) | **0.914** | **1.000** | **0.949** | 0 |
+| **Hybrid + cross-encoder rerank** (default) | **0.914** | 0.971 | 0.943 | 0 |
+| Hybrid + rerank, no rejected-proposal penalty | **0.914** | 0.971 | 0.936 | 5 |
 
-**End to end** (hybrid + rerank, local models via Ollama)
+The penalty leaves Hit@1 and Hit@5 unchanged and lifts MRR@5 (0.936 → 0.943 with rerank, 0.930 → 0.949 for
+plain hybrid, whose Hit@1 also rises from 0.886). Its main effect is in the last column: without it, 5 of 35
+questions get a rejected idea as their top passage, including "How can I assign a value to a variable inside
+an if condition?". With it, none do. Plain hybrid now edges out the reranked mode on Hit@5 and MRR@5.
+The default has not been switched: 35 questions are too few to separate them, and that change would need
+its own end-to-end run.
+
+**End to end** (hybrid + rerank, local models via Ollama; measured before the rejected-proposal penalty was
+added and not yet re-run)
 
 | | qwen3.5:4b | qwen3.5:9b |
 |---|---|---|
@@ -50,10 +61,12 @@ cheap deterministic guard. Making the gate stricter after a rewrite is a planned
 
 **What still fails, and why**
 
-- *"How can I assign a value inside an if condition?"* The top passage is from PEP 572's
-  **rejected alternatives** section (`if ... as match:`), and the model presents a rejected idea as the
-  answer. Retrieval is right at the document level but wrong about *status*; tagging chunks from
-  "Rejected Ideas" sections and down-weighting them is the next fix.
+- *"How can I assign a value inside an if condition?"* In the end-to-end runs above, the top passage was
+  from PEP 572's **rejected alternatives** section (`if ... as match:`) and the model presented a rejected
+  idea as the answer. Chunks under "Rejected Ideas"-style headings are now tagged and demoted, so a
+  normative PEP 572 passage ranks first (retrieval table above), and any rejected passage that is still
+  retrieved reaches the model labelled "(rejected proposal)". Whether the answer itself is now correct
+  has not been re-measured end to end yet.
 - *"Which PEP allows `list[int]`?"* Reranking promoted PEP 604 (which also mentions `list[int]`)
   above PEP 585, and the model correctly refused rather than guess from the wrong passages.
 - Two answers are right in substance but miss the exact key term (e.g. "a marker file" instead of
@@ -69,6 +82,14 @@ the style guide; its header does.
 → assignment expressions); BM25 catches exact identifiers (`pyvenv.cfg`, `__annotations__`) that small
 embedding models blur. Reciprocal Rank Fusion combines the two rankings without having to calibrate
 their incompatible score scales.
+
+**Rejected proposals are tagged, not deleted.** PEPs spend whole sections on ideas they turned down, and
+those passages often match a question's wording better than the specification does. At ingest, every chunk
+records its heading path; a chunk whose heading or any ancestor heading reads "Rejected …", "Abandoned …",
+"Alternatives …" or "Deferred ideas" gets `status="rejected"` (135 of 1,571 chunks). In the hybrid modes these
+chunks are demoted by `RAG_REJECTED_PENALTY` (default 2.0): that many cross-encoder logits after reranking,
+that many rank places in plain RRF. Stored scores, and so the relevance gate, are untouched. The chunks stay
+retrievable for questions that are *about* rejected ideas, and the prompt labels them "(rejected proposal)".
 
 **The relevance gate decides whether the model is called at all.** A cross-encoder scores
 (question, passage) pairs; if nothing clears the threshold the graph tries one query rewrite, then
@@ -151,7 +172,11 @@ tests/           unit tests with fake embeddings, reranker and LLM
   wrong claims; an LLM-as-judge faithfulness score would complement it.
 - 45 questions written by one person over one corpus: enough to compare configurations, not to claim
   general accuracy.
-- The relevance threshold was tuned on the same questions it is evaluated on.
+- The relevance threshold and the rejected-proposal penalty were tuned on the same questions they are
+  evaluated on.
+- Rejected sections are found by heading text, a heuristic. A bare "alternatives" is too broad: PEP 318's
+  "Syntax Alternatives" section also explains the syntax that was adopted. So "Alternative(s)" only
+  counts as a heading's first word. A different corpus may need a different rule.
 
 ## License
 

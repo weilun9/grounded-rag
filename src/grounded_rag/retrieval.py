@@ -6,11 +6,16 @@ Modes, used by the evaluation ablation:
     bm25           lexical only
     hybrid         RRF(vector, bm25)
     hybrid_rerank  RRF candidates re-scored by a cross-encoder
+
+In the hybrid modes, chunks from "Rejected Ideas"-style sections (Chunk.status == "rejected") are
+demoted in the final ranking by `rejected_penalty`; see HybridIndex._demote_rejected. The single-retriever
+modes stay raw baselines for the ablation.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import re
 import shutil
 import uuid
@@ -89,11 +94,12 @@ class HybridIndex:
     COLLECTION = "chunks"
 
     def __init__(self, chunks: list[Chunk], embeddings: Embeddings, persist_dir: Path | None = None,
-                 reranker: Reranker | None = None, _vectorstore=None):
+                 reranker: Reranker | None = None, rejected_penalty: float = 0.0, _vectorstore=None):
         self.chunks = chunks
         self.by_id = {c.chunk_id: c for c in chunks}
         self.embeddings = embeddings
         self.reranker = reranker
+        self.rejected_penalty = rejected_penalty
         self.bm25 = BM25Okapi([tokenize(c.embed_text) for c in chunks])
         self.vectorstore = _vectorstore or self._build_vectorstore(persist_dir)
 
@@ -115,24 +121,25 @@ class HybridIndex:
             batch = self.chunks[i : i + 256]
             store.add_texts(
                 texts=[c.embed_text for c in batch],
-                metadatas=[{"doc_id": c.doc_id, "section": c.section} for c in batch],
+                metadatas=[{"doc_id": c.doc_id, "section": c.section, "status": c.status} for c in batch],
                 ids=[c.chunk_id for c in batch],
             )
         return store
 
     @classmethod
     def build(cls, chunks: list[Chunk], embeddings: Embeddings, index_dir: Path,
-              reranker: Reranker | None = None) -> HybridIndex:
+              reranker: Reranker | None = None, rejected_penalty: float = 0.0) -> HybridIndex:
         if index_dir.exists():
             shutil.rmtree(index_dir)
         index_dir.mkdir(parents=True)
         with (index_dir / "chunks.jsonl").open("w", encoding="utf-8") as f:
             for c in chunks:
                 f.write(json.dumps(c.to_dict(), ensure_ascii=False) + "\n")
-        return cls(chunks, embeddings, persist_dir=index_dir, reranker=reranker)
+        return cls(chunks, embeddings, persist_dir=index_dir, reranker=reranker, rejected_penalty=rejected_penalty)
 
     @classmethod
-    def load(cls, index_dir: Path, embeddings: Embeddings, reranker: Reranker | None = None) -> HybridIndex:
+    def load(cls, index_dir: Path, embeddings: Embeddings, reranker: Reranker | None = None,
+             rejected_penalty: float = 0.0) -> HybridIndex:
         from langchain_chroma import Chroma
 
         path = index_dir / "chunks.jsonl"
@@ -141,7 +148,7 @@ class HybridIndex:
         chunks = [Chunk(**json.loads(line)) for line in path.open(encoding="utf-8")]
         store = Chroma(collection_name=cls.COLLECTION, embedding_function=embeddings,
                        persist_directory=str(index_dir / "chroma"))
-        return cls(chunks, embeddings, reranker=reranker, _vectorstore=store)
+        return cls(chunks, embeddings, reranker=reranker, rejected_penalty=rejected_penalty, _vectorstore=store)
 
     # ---- search ---------------------------------------------------------------------
 
@@ -172,7 +179,27 @@ class HybridIndex:
             for hit, s in zip(hits, self.reranker.score(query, [h.chunk.embed_text for h in hits])):
                 hit.rerank_score = s
             hits.sort(key=lambda h: h.rerank_score, reverse=True)
+        if mode in ("hybrid", "hybrid_rerank"):
+            hits = self._demote_rejected(hits)
         return hits[:top_k]
+
+    def _demote_rejected(self, hits: list[Hit]) -> list[Hit]:
+        """Re-order so rejected-proposal chunks lose `rejected_penalty` against normative ones.
+
+        After reranking the penalty is subtracted from the cross-encoder logit. RRF scores are rank-derived,
+        so without a reranker it is applied in rank units (a rejected chunk drops `penalty` places, rounded up).
+        Stored scores are left untouched: the relevance gate still sees the raw logit.
+        """
+        if self.rejected_penalty <= 0 or not hits:
+            return hits
+        p = self.rejected_penalty
+        if all(h.rerank_score is not None for h in hits):
+            def key(i_h):
+                return -(i_h[1].rerank_score - (p if i_h[1].chunk.status == "rejected" else 0.0))
+        else:
+            def key(i_h):
+                return i_h[0] + (math.ceil(p) + 0.5 if i_h[1].chunk.status == "rejected" else 0.0)
+        return [h for _, h in sorted(enumerate(hits), key=key)]
 
     def score_relevance(self, query: str, hits: list[Hit]) -> list[Hit]:
         """Fill rerank_score for hits that don't have one yet (used by the relevance gate)."""
