@@ -4,7 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HF_HOME=/app/.hf \
-    TOKENIZERS_PARALLELISM=false
+    TOKENIZERS_PARALLELISM=false \
+    RAG_CORPUS_DIR=/app/data/corpus \
+    RAG_INDEX_DIR=/app/data/index
 
 WORKDIR /app
 
