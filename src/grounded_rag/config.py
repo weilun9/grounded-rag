@@ -33,6 +33,9 @@ class Settings:
     retrieval_mode: str = field(default_factory=lambda: _env("RAG_RETRIEVAL_MODE", "hybrid_rerank"))
     # Cross-encoder logit below which a passage is treated as irrelevant.
     relevance_threshold: float = field(default_factory=lambda: float(_env("RAG_RELEVANCE_THRESHOLD", "-2.0")))
+    # After a query rewrite, passages are re-scored against the ORIGINAL question and must clear this stricter
+    # threshold. A rewrite can drift toward corpus vocabulary, so a second chance has to earn a higher bar.
+    rewrite_threshold: float = field(default_factory=lambda: float(_env("RAG_REWRITE_THRESHOLD", "0.0")))
     max_rewrites: int = field(default_factory=lambda: int(_env("RAG_MAX_REWRITES", "1")))
 
     # ollama | anthropic | openai | none (extractive, no LLM)

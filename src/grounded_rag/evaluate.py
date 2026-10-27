@@ -4,6 +4,9 @@ retrieval  - doc-level Hit@1, Hit@5 and MRR@5 for every retrieval mode (no LLM n
 e2e        - runs the full graph and scores answer correctness (required key terms present),
              citation precision (cited passages come from an expected document),
              refusal on unanswerable questions, false refusals on answerable ones, and latency.
+refusals   - unanswerable questions only: who refused each one (relevance gate on the first pass, gate after a
+             rewrite, the model's own "I don't know", or the citation verifier) and the gate scores behind it.
+             Runs with RAG_LLM_PROVIDER=none (first-pass gate only: no LLM means no rewrite and no model refusal).
 """
 
 from __future__ import annotations
@@ -57,6 +60,7 @@ def eval_e2e(pipeline: RAGPipeline, questions: list[dict]) -> dict:
         answer = out["answer"].lower()
         cited_docs = [c["doc_id"] for c in out["citations"]]
         row = {"id": q["id"], "answerable": q["answerable"], "status": out["status"],
+               "refused_by": out.get("refused_by"), "gate_best": out.get("gate_best", []),
                "latency_ms": out["latency_ms"], "answer": out["answer"], "cited_docs": cited_docs}
         if q["answerable"]:
             # must_include is a list of groups; every group needs at least one of its alternatives
@@ -79,10 +83,67 @@ def eval_e2e(pipeline: RAGPipeline, questions: list[dict]) -> dict:
         "citation_precision": round(statistics.mean(precisions), 3) if precisions else None,
         "false_refusal_rate": round(sum(r["status"] != "answered" for r in ans) / len(ans), 3),
         "refusal_rate_unanswerable": round(sum(r["status"] != "answered" for r in unans) / len(unans), 3) if unans else None,
+        "unanswerable_outcomes": refusal_breakdown(unans),
         "latency_ms_p50": latencies[len(latencies) // 2],
         "latency_ms_p95": latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))],
         "rows": rows,
     }
+
+
+def refusal_outcome(row: dict) -> str:
+    """gate | gate_after_rewrite | model | verifier | answered"""
+    if row["status"] == "answered":
+        return "answered"
+    if row.get("refused_by") == "gate":
+        return "gate_after_rewrite" if len(row.get("gate_best", [])) > 1 else "gate"
+    return row.get("refused_by") or "model"
+
+
+OUTCOMES = ("gate", "gate_after_rewrite", "model", "verifier", "answered")
+
+
+def refusal_breakdown(rows: list[dict]) -> dict[str, int]:
+    counts = dict.fromkeys(OUTCOMES, 0)
+    for r in rows:
+        counts[refusal_outcome(r)] += 1
+    return counts
+
+
+def eval_refusals(pipeline: RAGPipeline, questions: list[dict]) -> dict:
+    rows = []
+    for q in questions:
+        if q["answerable"]:
+            continue
+        out = pipeline.ask(q["question"])
+        row = {"id": q["id"], "question": q["question"], "status": out["status"], "refused_by": out["refused_by"],
+               "gate_best": out["gate_best"], "trace": out["trace"]}
+        row["outcome"] = refusal_outcome(row)
+        rows.append(row)
+    return {"n_unanswerable": len(rows), "relevance_threshold": pipeline.s.relevance_threshold,
+            "rewrite_threshold": pipeline.s.rewrite_threshold, "outcomes": refusal_breakdown(rows), "rows": rows}
+
+
+def refusals_markdown(report: dict, meta: dict) -> str:
+    def fmt(v: float | None) -> str:
+        return "-" if v is None else f"{v:.2f}"
+
+    o = report["outcomes"]
+    lines = [f"# Refusal attribution ({meta['timestamp']})", "",
+             (f"- LLM: `{meta['llm']}` · mode: `{meta['retrieval_mode']}` · gate threshold "
+              f"{report['relevance_threshold']} (first pass) / {report['rewrite_threshold']} (after rewrite)"), "",
+             f"| Outcome ({report['n_unanswerable']} unanswerable) | Count |", "|---|---|",
+             f"| Refused by gate, first pass (no LLM call) | {o['gate']} |",
+             f"| Refused by gate after rewrite (rewrite call only) | {o['gate_after_rewrite']} |",
+             f"| Refused by the model | {o['model']} |",
+             f"| Refused by the citation verifier | {o['verifier']} |",
+             f"| **Answered (leak)** | {o['answered']} |", "",
+             "| Id | Question | Best score, first pass | Best score, after rewrite | Outcome |",
+             "|---|---|---|---|---|"]
+    for r in report["rows"]:
+        g = r["gate_best"] + [None] * (2 - len(r["gate_best"]))
+        lines.append(f"| {r['id']} | {r['question']} | {fmt(g[0])} | {fmt(g[1])} | {r['outcome']} |")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def to_markdown(retrieval: dict | None, e2e: dict | None, meta: dict) -> str:
@@ -102,6 +163,8 @@ def to_markdown(retrieval: dict | None, e2e: dict | None, meta: dict) -> str:
                   f"| Citation precision | {e2e['citation_precision']} |",
                   f"| False-refusal rate | {e2e['false_refusal_rate']:.3f} |",
                   f"| Refusal rate on {e2e['n_unanswerable']} unanswerable | {e2e['refusal_rate_unanswerable']} |",
+                  "| Unanswerable refused by gate / gate after rewrite / model / verifier | "
+                  + " / ".join(str(e2e["unanswerable_outcomes"][k]) for k in OUTCOMES[:4]) + " |",
                   f"| Latency p50 / p95 | {e2e['latency_ms_p50']} ms / {e2e['latency_ms_p95']} ms |", "",
                   "### Failures", ""]
         for r in e2e["rows"]:
@@ -112,13 +175,9 @@ def to_markdown(retrieval: dict | None, e2e: dict | None, meta: dict) -> str:
     return "\n".join(lines)
 
 
-def run(settings: Settings, index: HybridIndex, pipeline: RAGPipeline | None, do_retrieval: bool, do_e2e: bool,
-        questions_path: Path = QUESTIONS) -> Path:
-    questions = load_questions(questions_path)
-    retrieval = eval_retrieval(index, questions, settings) if do_retrieval else None
-    e2e = eval_e2e(pipeline, questions) if do_e2e and pipeline else None
-    meta = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+def _meta(settings: Settings, index: HybridIndex, pipeline: RAGPipeline | None) -> dict:
+    return {
+        "timestamp": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M"),
         "corpus": f"{len({c.doc_id for c in index.chunks})} documents, {len(index.chunks)} chunks",
         "embed_model": settings.embed_model,
         "rerank_model": settings.rerank_model,
@@ -126,10 +185,30 @@ def run(settings: Settings, index: HybridIndex, pipeline: RAGPipeline | None, do
         "llm": "none" if pipeline is None or pipeline.llm is None
         else f"{settings.llm_provider}:{settings.llm_model or DEFAULT_MODELS.get(settings.llm_provider, '')}",
     }
+
+
+def run(settings: Settings, index: HybridIndex, pipeline: RAGPipeline | None, do_retrieval: bool, do_e2e: bool,
+        questions_path: Path = QUESTIONS) -> Path:
+    questions = load_questions(questions_path)
+    retrieval = eval_retrieval(index, questions, settings) if do_retrieval else None
+    e2e = eval_e2e(pipeline, questions) if do_e2e and pipeline else None
+    meta = _meta(settings, index, pipeline)
     RESULTS.mkdir(parents=True, exist_ok=True)
     tag = "retrieval" if not do_e2e else meta["llm"].replace(":", "_").replace("/", "_")
     (RESULTS / f"{tag}.json").write_text(json.dumps({"meta": meta, "retrieval": retrieval, "e2e": e2e}, indent=2,
                                                     ensure_ascii=False), encoding="utf-8")
     md = RESULTS / f"{tag}.md"
     md.write_text(to_markdown(retrieval, e2e, meta), encoding="utf-8")
+    return md
+
+
+def run_refusals(settings: Settings, pipeline: RAGPipeline, questions_path: Path = QUESTIONS) -> Path:
+    report = eval_refusals(pipeline, load_questions(questions_path))
+    meta = _meta(settings, pipeline.index, pipeline)
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    tag = "refusals_" + meta["llm"].replace(":", "_").replace("/", "_")
+    (RESULTS / f"{tag}.json").write_text(json.dumps({"meta": meta, "refusals": report}, indent=2, ensure_ascii=False),
+                                         encoding="utf-8")
+    md = RESULTS / f"{tag}.md"
+    md.write_text(refusals_markdown(report, meta), encoding="utf-8")
     return md

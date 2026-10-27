@@ -1,4 +1,4 @@
-"""CLI:  python -m grounded_rag {ingest | ask "question" | search "query" | eval [--e2e] | serve}"""
+"""CLI:  python -m grounded_rag {ingest | ask "question" | search "query" | eval [--e2e | --refusals] | serve}"""
 
 from __future__ import annotations
 
@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     e = sub.add_parser("eval", help="run the evaluation set")
     e.add_argument("--e2e", action="store_true", help="also run the full pipeline with the configured LLM")
     e.add_argument("--retrieval-only", action="store_true")
+    e.add_argument("--refusals", action="store_true",
+                   help="only the unanswerable questions: count refusals by the gate vs the model")
     v = sub.add_parser("serve", help="start the API + web UI")
     v.add_argument("--port", type=int, default=8000)
     v.add_argument("--host", default="127.0.0.1")
@@ -56,6 +58,9 @@ def main(argv: list[str] | None = None) -> int:
         from . import evaluate
         from .service import load_index, load_pipeline
 
+        if args.refusals:
+            print(evaluate.run_refusals(settings, load_pipeline(settings)).read_text(encoding="utf-8"))
+            return 0
         do_e2e = args.e2e and not args.retrieval_only
         pipeline = load_pipeline(settings) if do_e2e else None
         index = pipeline.index if pipeline else load_index(settings)

@@ -46,6 +46,10 @@ jobs:
         run: |
           python -m grounded_rag ingest
           python -m grounded_rag eval --retrieval-only | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Relevance-gate refusals on unanswerable questions (no LLM)
+        env:
+          RAG_LLM_PROVIDER: none
+        run: python -m grounded_rag eval --refusals | tee -a "$GITHUB_STEP_SUMMARY"
 
   docker:
     needs: test

@@ -41,12 +41,20 @@ question ──► retrieve ──► grade ──(relevant)──► generate �
 | Refusal rate on 10 unanswerable | **1.0** | **1.0** |
 | Latency p50 / p95 | 3.1 s / 4.3 s | 3.2 s / 5.0 s |
 
-On the first retrieval pass the relevance gate rejects 8 of the 10 unanswerable questions. The query
-rewrite then pulls 4 of those back in: the rewrite prompt steers queries toward Python vocabulary, so
-"PostgreSQL replication slot" comes back as a Python-flavoured query whose passages clear the gate.
-In the end 4 of 10 are refused with no generation call and 6 are refused by the model's own
-"I don't know". All 10 end up refused, but the rewrite step costs one extra LLM call and weakens the
-cheap deterministic guard. Making the gate stricter after a rewrite is a planned change.
+In the run above, the relevance gate rejected 8 of the 10 unanswerable questions on the first retrieval
+pass. The query rewrite then pulled 4 of those back in: the rewrite prompt steered queries toward Python
+vocabulary, so "PostgreSQL replication slot" came back as a Python-flavoured query whose passages cleared
+the gate. In the end 4 of 10 were refused with no generation call and 6 by the model's own "I don't know".
+All 10 ended up refused, but the deterministic guard was leaking.
+
+Two causes, both fixed since that run: in `hybrid_rerank` mode the passages kept the cross-encoder scores
+they got against the *rewritten* query, so the gate never judged them against the user's actual question;
+and the rewrite prompt named the corpus domain. Now, after a rewrite, passages are re-scored against the
+original question and must clear a stricter threshold (`RAG_REWRITE_THRESHOLD`, default 0.0 versus -2.0
+on the first pass), and the rewrite prompt is domain-neutral. Every refusal records who made it
+(`refused_by`: `gate` / `model` / `verifier`, plus the gate scores in the trace). The table above has not
+been re-run with this change yet; `python -m grounded_rag eval --refusals` produces the gate-versus-model
+breakdown for the 10 unanswerable questions.
 
 **What still fails, and why**
 
@@ -73,7 +81,9 @@ their incompatible score scales.
 **The relevance gate decides whether the model is called at all.** A cross-encoder scores
 (question, passage) pairs; if nothing clears the threshold the graph tries one query rewrite, then
 refuses. Clearly off-topic questions are rejected deterministically and cheaply, instead of relying on
-the prompt instruction "answer only from context" (see Results for where this guard leaks).
+the prompt instruction "answer only from context". The gate always scores passages against the user's
+original question; after a rewrite it applies a stricter threshold, because a rewrite that drifts toward
+the corpus vocabulary can otherwise turn an off-topic question into an on-topic search (see Results).
 
 **The verifier fails closed.** The model must cite `[n]` for every claim. Citations pointing at passages
 that don't exist are stripped; an answer left with no valid citation is replaced by a refusal.
@@ -96,6 +106,7 @@ python -m grounded_rag ingest                           # build the index
 python -m grounded_rag ask "How can I assign a value inside an if condition?"
 python -m grounded_rag search "pyvenv.cfg" --mode bm25  # inspect retrieval only
 python -m grounded_rag eval --e2e                       # full evaluation report
+python -m grounded_rag eval --refusals                  # unanswerable questions: refused by gate vs model
 python -m grounded_rag serve                            # API + UI at http://127.0.0.1:8000
 ```
 
@@ -109,7 +120,7 @@ docker compose up --build
 
 | Method | Path | |
 |---|---|---|
-| `POST` | `/ask` `{"question": "..."}` | answer, status (`answered` / `refused` / `ungrounded`), citations, retrieved passages, graph trace, latency |
+| `POST` | `/ask` `{"question": "..."}` | answer, status (`answered` / `refused` / `ungrounded`), `refused_by` (`gate` / `model` / `verifier`), best gate score per pass, citations, retrieved passages, graph trace, latency |
 | `GET` | `/search?q=...&mode=hybrid_rerank&k=5` | retrieval only, any mode |
 | `GET` | `/health` | corpus size, retrieval mode, active LLM |
 | `GET` | `/` | web UI |
@@ -125,11 +136,15 @@ docker compose up --build
   "What does PEP 9999 propose?").
 
 Metrics: doc-level Hit@1 / Hit@5 / MRR@5 per retrieval mode; end-to-end answer accuracy, citation
-precision, false-refusal rate, refusal rate on unanswerable questions, and p50 / p95 latency.
+precision, false-refusal rate, refusal rate on unanswerable questions (split into refused by the gate,
+by the gate after a rewrite, by the model, or by the citation verifier), and p50 / p95 latency.
+`eval --refusals` runs only the unanswerable questions and reports that split with the gate scores; with
+`RAG_LLM_PROVIDER=none` there is no rewrite and no model, so it measures the first-pass gate alone.
 A script checks that every gold key term really occurs in its labelled source document.
 
 CI runs lint and unit tests (no model downloads), then builds the real index and publishes the
-retrieval report to the job summary, and builds the Docker image.
+retrieval report and the first-pass gate refusal report (no LLM) to the job summary, and builds the
+Docker image.
 
 ## Layout
 
@@ -151,7 +166,9 @@ tests/           unit tests with fake embeddings, reranker and LLM
   wrong claims; an LLM-as-judge faithfulness score would complement it.
 - 45 questions written by one person over one corpus: enough to compare configurations, not to claim
   general accuracy.
-- The relevance threshold was tuned on the same questions it is evaluated on.
+- The relevance threshold was tuned on the same questions it is evaluated on. The post-rewrite threshold
+  (0.0) sits below the top score of most answerable questions, but it has not yet been validated against
+  the post-rewrite scores of the questions that leaked.
 
 ## License
 

@@ -7,7 +7,9 @@
 
 Two guardrails sit outside the model:
   * the relevance gate (cross-encoder score) decides whether the model is asked at all,
-    so off-corpus questions are refused without a generation call;
+    so off-corpus questions are refused without a generation call. Passages are always scored against the
+    ORIGINAL question, and after a rewrite they must clear the stricter RAG_REWRITE_THRESHOLD, so a rewrite
+    that drifts toward corpus vocabulary cannot smuggle an off-corpus question past the gate;
   * the verifier fails closed: an answer with no valid [n] citation is replaced by a refusal.
 """
 
@@ -33,8 +35,9 @@ Rules:
 - Do not use outside knowledge. If the passages do not contain the answer, reply exactly: {REFUSAL}
 - Be concise: at most 4 sentences. Quote code or identifiers exactly as they appear."""
 
-REWRITE_PROMPT = """Rewrite the user's question into a short search query for a keyword + semantic search engine
-over Python Enhancement Proposals (PEPs). Expand abbreviations, add likely technical terms, and drop filler words.
+REWRITE_PROMPT = """Rewrite the user's question into a short search query for a keyword + semantic search engine.
+Keep the question's subject: expand abbreviations, add synonyms and technical terms for that same subject,
+and drop filler words. Do not change the topic, technology or product the question is about.
 Return only the query, nothing else.
 
 Question: {question}"""
@@ -51,6 +54,8 @@ class RAGState(TypedDict, total=False):
     answer: str
     citations: list[dict]
     status: str  # answered | refused | ungrounded
+    refused_by: str | None  # gate | model | verifier, None when answered
+    gate_best: list[float | None]  # best relevance score against the question, one entry per grade pass
     trace: list[str]
 
 
@@ -87,14 +92,30 @@ class RAGPipeline:
                                  top_k=self.s.top_k, candidate_k=self.s.candidate_k)
         return {"hits": hits, "trace": state.get("trace", []) + [f"retrieve({state['query']!r}) -> {len(hits)}"]}
 
+    def _threshold(self, state: RAGState) -> float:
+        return self.s.rewrite_threshold if state.get("rewrites", 0) else self.s.relevance_threshold
+
     def _grade(self, state: RAGState) -> RAGState:
         hits = state["hits"]
+        gate_best = state.get("gate_best", [])
         if self.index.reranker is None:
-            relevant = hits
+            return {"relevant": hits, "gate_best": gate_best + [None],
+                    "trace": state["trace"] + [f"grade -> {len(hits)}/{len(hits)} (no reranker, gate off)"]}
+        if state["query"] != state["question"]:
+            # hybrid_rerank scored these against the rewritten query; the gate must judge the original question
+            for h in hits:
+                h.rerank_score = None
+            self.index.score_relevance(state["question"], hits)
+            hits.sort(key=lambda h: h.rerank_score, reverse=True)
         else:
             self.index.score_relevance(state["question"], hits)
-            relevant = [h for h in hits if h.rerank_score is not None and h.rerank_score >= self.s.relevance_threshold]
-        return {"relevant": relevant, "trace": state["trace"] + [f"grade -> {len(relevant)}/{len(hits)} relevant"]}
+        threshold = self._threshold(state)
+        relevant = [h for h in hits if h.rerank_score is not None and h.rerank_score >= threshold]
+        best = max((h.rerank_score for h in hits if h.rerank_score is not None), default=None)
+        best_txt = "none" if best is None else f"{best:.2f}"
+        return {"relevant": relevant, "gate_best": gate_best + [best],
+                "trace": state["trace"] + [f"grade -> {len(relevant)}/{len(hits)} relevant (best {best_txt}, "
+                                           + f"threshold {threshold:.2f})"]}
 
     def _route_after_grade(self, state: RAGState) -> str:
         if state["relevant"]:
@@ -127,11 +148,18 @@ class RAGPipeline:
              "text": hits[n - 1].chunk.text}
             for n in cited
         ]
-        return {"answer": answer, "citations": citations, "status": status,
-                "trace": state["trace"] + [f"verify -> {status}"]}
+        refused_by = {"refused": "model", "ungrounded": "verifier"}.get(status)
+        note = f" (by {refused_by})" if refused_by else ""
+        return {"answer": answer, "citations": citations, "status": status, "refused_by": refused_by,
+                "trace": state["trace"] + [f"verify -> {status}{note}"]}
 
     def _refuse(self, state: RAGState) -> RAGState:
-        return {"answer": REFUSAL, "citations": [], "status": "refused", "trace": state["trace"] + ["refuse"]}
+        best = state["gate_best"][-1]
+        best_txt = "no passages" if best is None else f"best {best:.2f} < {self._threshold(state):.2f}"
+        rewrites = state.get("rewrites", 0)
+        reason = f"gate: {best_txt}" + (f" after {rewrites} rewrite(s)" if rewrites else "")
+        return {"answer": REFUSAL, "citations": [], "status": "refused", "refused_by": "gate",
+                "trace": state["trace"] + [f"refuse ({reason})"]}
 
     # ---- wiring ---------------------------------------------------------------------
 
@@ -155,11 +183,14 @@ class RAGPipeline:
 
     def ask(self, question: str) -> dict:
         t0 = time.perf_counter()
-        out = self.graph.invoke({"question": question, "query": question, "rewrites": 0, "trace": []})
+        out = self.graph.invoke({"question": question, "query": question, "rewrites": 0, "gate_best": [],
+                                 "trace": []})
         return {
             "question": question,
             "answer": out["answer"],
             "status": out["status"],
+            "refused_by": out.get("refused_by"),
+            "gate_best": [None if b is None else round(b, 3) for b in out.get("gate_best", [])],
             "citations": out.get("citations", []),
             "retrieved": [
                 {"doc_id": h.chunk.doc_id, "section": h.chunk.section, "chunk_id": h.chunk.chunk_id,
