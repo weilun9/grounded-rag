@@ -1,0 +1,45 @@
+{"id": "q01", "answerable": true, "question": "What syntax does PEP 572 introduce for assignment expressions?", "expected_docs": ["PEP 572"], "must_include": [[":="]]}
+{"id": "q02", "answerable": true, "question": "How many spaces per indentation level does PEP 8 recommend?", "expected_docs": ["PEP 8"], "must_include": [["4", "four"]]}
+{"id": "q03", "answerable": true, "question": "What is the maximum line length recommended by the Python style guide?", "expected_docs": ["PEP 8"], "must_include": [["79"]]}
+{"id": "q04", "answerable": true, "question": "What is the first aphorism in the Zen of Python?", "expected_docs": ["PEP 20"], "must_include": [["beautiful is better than ugly"]]}
+{"id": "q05", "answerable": true, "question": "What kind of quotes should be used around docstrings?", "expected_docs": ["PEP 257"], "must_include": [["triple double quotes", "\"\"\""]]}
+{"id": "q06", "answerable": true, "question": "Which symbol is placed before a decorator expression above a function definition?", "expected_docs": ["PEP 318"], "must_include": [["@"]]}
+{"id": "q07", "answerable": true, "question": "Which two methods does an object need in order to be used in a with statement?", "expected_docs": ["PEP 343"], "must_include": [["__enter__"], ["__exit__"]]}
+{"id": "q08", "answerable": true, "question": "What syntax lets a generator delegate part of its operations to a subgenerator?", "expected_docs": ["PEP 380"], "must_include": [["yield from"]]}
+{"id": "q09", "answerable": true, "question": "What configuration file marks the root of a virtual environment?", "expected_docs": ["PEP 405"], "must_include": [["pyvenv.cfg"]]}
+{"id": "q10", "answerable": true, "question": "Which standard library module provides the building blocks for type hints?", "expected_docs": ["PEP 484"], "must_include": [["typing"]]}
+{"id": "q11", "answerable": true, "question": "Which new keywords did PEP 492 introduce for native coroutines?", "expected_docs": ["PEP 492"], "must_include": [["async"], ["await"]]}
+{"id": "q12", "answerable": true, "question": "What are formatted string literals commonly called?", "expected_docs": ["PEP 498"], "must_include": [["f-string"]]}
+{"id": "q13", "answerable": true, "question": "Which file does PEP 518 specify for declaring build system requirements?", "expected_docs": ["PEP 518"], "must_include": [["pyproject.toml"]]}
+{"id": "q14", "answerable": true, "question": "What does PEP 526 add syntax for?", "expected_docs": ["PEP 526"], "must_include": [["variable annotation", "annotating variables", "annotations for variables", "type annotations of variables", "annotate variables"]]}
+{"id": "q15", "answerable": true, "question": "Which decorator does PEP 557 add to generate __init__ and __repr__ automatically?", "expected_docs": ["PEP 557"], "must_include": [["dataclass"]]}
+{"id": "q16", "answerable": true, "question": "Which PEP allows writing list[int] instead of typing.List[int]?", "expected_docs": ["PEP 585"], "must_include": [["585"]]}
+{"id": "q17", "answerable": true, "question": "How can a union of two types be written using an operator?", "expected_docs": ["PEP 604"], "must_include": [["|"]]}
+{"id": "q18", "answerable": true, "question": "What does ParamSpec capture in PEP 612?", "expected_docs": ["PEP 612"], "must_include": [["parameter"]]}
+{"id": "q19", "answerable": true, "question": "In which pyproject.toml table is core project metadata stored?", "expected_docs": ["PEP 621"], "must_include": [["[project]"]]}
+{"id": "q20", "answerable": true, "question": "Which statement does structural pattern matching introduce?", "expected_docs": ["PEP 634", "PEP 636"], "must_include": [["match"]]}
+{"id": "q21", "answerable": true, "question": "Which pattern acts as a wildcard that matches anything in a match statement?", "expected_docs": ["PEP 634", "PEP 636"], "must_include": [["_"]]}
+{"id": "q22", "answerable": true, "question": "What marker file indicates that a Python installation is externally managed?", "expected_docs": ["PEP 668"], "must_include": [["EXTERNALLY-MANAGED"]]}
+{"id": "q23", "answerable": true, "question": "Which module is the Self type added to?", "expected_docs": ["PEP 673"], "must_include": [["typing"]]}
+{"id": "q24", "answerable": true, "question": "Which soft keyword starts the new type alias statement in PEP 695?", "expected_docs": ["PEP 695"], "must_include": [["type"]]}
+{"id": "q25", "answerable": true, "question": "What lock does PEP 703 propose making optional in CPython?", "expected_docs": ["PEP 703"], "must_include": [["GIL", "global interpreter lock"]]}
+{"id": "q26", "answerable": true, "question": "Which function attribute stores function annotations?", "expected_docs": ["PEP 3107"], "must_include": [["__annotations__"]]}
+{"id": "q27", "answerable": true, "question": "Which module did PEP 3156 add for asynchronous I/O?", "expected_docs": ["PEP 3156"], "must_include": [["asyncio"]]}
+{"id": "q28", "answerable": true, "question": "Which segment marks a development release in a version identifier?", "expected_docs": ["PEP 440"], "must_include": [["dev"]]}
+{"id": "q29", "answerable": true, "question": "Which keyword turns an ordinary function into a generator function?", "expected_docs": ["PEP 255"], "must_include": [["yield"]]}
+{"id": "q30", "answerable": true, "question": "What naming convention does the style guide recommend for class names?", "expected_docs": ["PEP 8"], "must_include": [["CapWords", "CamelCase"]]}
+{"id": "q31", "answerable": true, "question": "How should comparisons to singletons like None be written?", "expected_docs": ["PEP 8"], "must_include": [["is not", "is none", "`is`", " is "]]}
+{"id": "q32", "answerable": true, "question": "How do you annotate an argument that may be either an int or None?", "expected_docs": ["PEP 484", "PEP 604"], "must_include": [["Optional", "| None"]]}
+{"id": "q33", "answerable": true, "question": "How can I assign a value to a variable inside an if condition?", "expected_docs": ["PEP 572"], "must_include": [[":="]]}
+{"id": "q34", "answerable": true, "question": "Where should I declare which tools are needed to build my package?", "expected_docs": ["PEP 518"], "must_include": [["pyproject.toml"]]}
+{"id": "q35", "answerable": true, "question": "How can a Linux distribution stop pip from installing into the system Python?", "expected_docs": ["PEP 668"], "must_include": [["EXTERNALLY-MANAGED", "externally managed", "externally-managed"]]}
+{"id": "u01", "answerable": false, "question": "What is the capital of New Zealand?", "expected_docs": [], "must_include": []}
+{"id": "u02", "answerable": false, "question": "How do I configure a PostgreSQL replication slot?", "expected_docs": [], "must_include": []}
+{"id": "u03", "answerable": false, "question": "What is the default port for Redis?", "expected_docs": [], "must_include": []}
+{"id": "u04", "answerable": false, "question": "Who won the 2022 FIFA World Cup?", "expected_docs": [], "must_include": []}
+{"id": "u05", "answerable": false, "question": "What does PEP 9999 propose?", "expected_docs": [], "must_include": []}
+{"id": "u06", "answerable": false, "question": "How do I train a ResNet image classifier in PyTorch?", "expected_docs": [], "must_include": []}
+{"id": "u07", "answerable": false, "question": "How do I deploy a Django application to Heroku?", "expected_docs": [], "must_include": []}
+{"id": "u08", "answerable": false, "question": "What is the syntax of a switch statement in Java?", "expected_docs": [], "must_include": []}
+{"id": "u09", "answerable": false, "question": "What is the boiling point of water in Fahrenheit?", "expected_docs": [], "must_include": []}
+{"id": "u10", "answerable": false, "question": "How much RAM does a Raspberry Pi 5 have?", "expected_docs": [], "must_include": []}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grounded RAG</title>
+<style>
+  :root { --bg:#f7f7f5; --card:#fff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e3e3e0; --accent:#2f5bd3; --warn:#b4541a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141416; --card:#1d1d20; --ink:#ececec; --muted:#9a9aa0; --line:#2e2e33; --accent:#7d9bff; --warn:#f0a36b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:820px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 24px; font-size:.92rem; }
+  form { display:flex; gap:8px; }
+  input { flex:1; min-width:0; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); font-size:1rem; }
+  button { padding:12px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .examples { margin:12px 0 24px; display:flex; flex-wrap:wrap; gap:6px; }
+  .examples button { background:var(--card); color:var(--ink); border:1px solid var(--line); font-weight:400; padding:6px 10px; font-size:.85rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:14px; }
+  .answer { white-space:pre-wrap; font-size:1.05rem; }
+  .meta { color:var(--muted); font-size:.82rem; margin-top:10px; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:99px; font-size:.75rem; border:1px solid var(--line); margin-right:6px; }
+  .badge.refused, .badge.ungrounded { color:var(--warn); border-color:var(--warn); }
+  details { border-top:1px solid var(--line); padding:10px 0; }
+  details:first-of-type { border-top:0; }
+  summary { cursor:pointer; font-weight:600; }
+  details p { white-space:pre-wrap; color:var(--muted); font-size:.9rem; margin:8px 0 0; }
+  code { font-size:.82rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Grounded RAG</h1>
+  <p class="sub" id="health">Cited answers from the indexed documents, or an explicit "I don't know".</p>
+  <form id="f"><input id="q" placeholder="Ask a question about the documents…" autocomplete="off" required minlength="3"><button id="go">Ask</button></form>
+  <div class="examples">
+    <button type="button">What does the walrus operator := do?</button>
+    <button type="button">How many spaces per indentation level does PEP 8 recommend?</button>
+    <button type="button">What is the capital of New Zealand?</button>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+fetch('/health').then(r => r.json()).then(h => {
+  $('#health').textContent = `${h.documents} documents · ${h.chunks} chunks · retrieval: ${h.retrieval_mode} · LLM: ${h.llm}`;
+}).catch(() => {});
+document.querySelectorAll('.examples button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; ask(); });
+$('#f').onsubmit = e => { e.preventDefault(); ask(); };
+async function ask() {
+  const q = $('#q').value.trim(); if (q.length < 3) return;
+  $('#go').disabled = true; $('#out').innerHTML = '<div class="card meta">Thinking…</div>';
+  try {
+    const r = await fetch('/ask', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q}) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    const cites = d.citations.map(c => `<details><summary>[${c.n}] ${esc(c.title)} › ${esc(c.section)}</summary><p>${esc(c.text)}</p></details>`).join('');
+    $('#out').innerHTML = `
+      <div class="card"><div class="answer">${esc(d.answer)}</div>
+        <div class="meta"><span class="badge ${d.status}">${d.status}</span>${d.latency_ms} ms</div></div>
+      ${cites ? `<div class="card">${cites}</div>` : ''}
+      <div class="card"><code>${d.trace.map(esc).join('<br>')}</code></div>`;
+  } catch (err) {
+    $('#out').innerHTML = `<div class="card"><span class="badge refused">error</span>${esc(String(err.message || err))}</div>`;
+  } finally { $('#go').disabled = false; }
+}
+</script>
+</body>
+</html>

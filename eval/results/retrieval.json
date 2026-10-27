@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "timestamp": "2026-10-27 14:04",
+    "corpus": "29 documents, 1571 chunks",
+    "embed_model": "BAAI/bge-small-en-v1.5",
+    "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "retrieval_mode": "hybrid_rerank",
+    "llm": "none"
+  },
+  "retrieval": {
+    "n_questions": 35,
+    "k": 5,
+    "modes": {
+      "vector": {
+        "hit@1": 0.857,
+        "hit@5": 0.943,
+        "mrr@5": 0.89,
+        "misses": [
+          "q09",
+          "q32"
+        ]
+      },
+      "bm25": {
+        "hit@1": 0.8,
+        "hit@5": 1.0,
+        "mrr@5": 0.883,
+        "misses": []
+      },
+      "hybrid": {
+        "hit@1": 0.886,
+        "hit@5": 1.0,
+        "mrr@5": 0.93,
+        "misses": []
+      },
+      "hybrid_rerank": {
+        "hit@1": 0.914,
+        "hit@5": 0.971,
+        "mrr@5": 0.936,
+        "misses": [
+          "q16"
+        ]
+      }
+    }
+  },
+  "e2e": null
+}

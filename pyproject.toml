@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grounded-rag"
+version = "0.1.0"
+description = "Cited question answering over documents: hybrid retrieval, cross-encoder relevance gate, LangGraph pipeline, evaluation harness."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "langchain-core>=1.0",
+    "langchain-text-splitters>=1.0",
+    "langchain-chroma>=1.0",
+    "langchain-ollama>=1.0",
+    "langgraph>=1.0",
+    "chromadb>=1.0",
+    "sentence-transformers>=3.0",
+    "rank-bm25>=0.2.2",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.30",
+    "pypdf>=4.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["langchain-anthropic>=1.0"]
+openai = ["langchain-openai>=1.0"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+grounded_rag = ["web/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"

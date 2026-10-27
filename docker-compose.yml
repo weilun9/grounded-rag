@@ -1,0 +1,14 @@
+services:
+  rag:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Default: the Ollama server on the host machine. Switch provider with RAG_LLM_PROVIDER.
+      RAG_LLM_PROVIDER: ${RAG_LLM_PROVIDER:-ollama}
+      RAG_LLM_MODEL: ${RAG_LLM_MODEL:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

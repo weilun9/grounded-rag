@@ -1,0 +1,591 @@
+{
+  "meta": {
+    "timestamp": "2026-10-27 14:12",
+    "corpus": "29 documents, 1571 chunks",
+    "embed_model": "BAAI/bge-small-en-v1.5",
+    "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "retrieval_mode": "hybrid_rerank",
+    "llm": "ollama:qwen3.5:4b"
+  },
+  "retrieval": {
+    "n_questions": 35,
+    "k": 5,
+    "modes": {
+      "vector": {
+        "hit@1": 0.857,
+        "hit@5": 0.943,
+        "mrr@5": 0.89,
+        "misses": [
+          "q09",
+          "q32"
+        ]
+      },
+      "bm25": {
+        "hit@1": 0.8,
+        "hit@5": 1.0,
+        "mrr@5": 0.883,
+        "misses": []
+      },
+      "hybrid": {
+        "hit@1": 0.886,
+        "hit@5": 1.0,
+        "mrr@5": 0.93,
+        "misses": []
+      },
+      "hybrid_rerank": {
+        "hit@1": 0.914,
+        "hit@5": 0.971,
+        "mrr@5": 0.936,
+        "misses": [
+          "q16"
+        ]
+      }
+    }
+  },
+  "e2e": {
+    "n_answerable": 35,
+    "n_unanswerable": 10,
+    "answer_accuracy": 0.857,
+    "citation_precision": 0.974,
+    "false_refusal_rate": 0.086,
+    "refusal_rate_unanswerable": 1.0,
+    "latency_ms_p50": 3113,
+    "latency_ms_p95": 4342,
+    "rows": [
+      {
+        "id": "q01",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 4507,
+        "answer": "PEP 572 introduces the syntax ``NAME := expr`` for assignment expressions [5]. This notation is visually reinforced by its parallel cadence with standard assignments like ``NAME = EXPR`` [4]. The proposal also updates dictionary comprehension evaluation order to ensure key expressions execute before value expressions [5].",
+        "cited_docs": [
+          "PEP 572",
+          "PEP 572"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q02",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 1963,
+        "answer": "PEP 8 recommends using 4 spaces per indentation level [1]. While the 4-space rule is generally preferred, it is noted as optional for continuation lines in some contexts [5]. Tabs should only be used if they are already consistent with existing code [3].",
+        "cited_docs": [
+          "PEP 8",
+          "PEP 8",
+          "PEP 8"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q03",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2431,
+        "answer": "The Python style guide recommends limiting all lines to a maximum of 79 characters [1]. For docstrings and comments, the limit should be reduced to 72 characters [1][2]. Teams may increase this limit up to 99 characters if they can reach agreement on the issue [2]. The standard library enforces the conservative limit of 79 characters for lines and 72 for docstrings/comments [2].",
+        "cited_docs": [
+          "PEP 8",
+          "PEP 8"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q04",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 1689,
+        "answer": "The first aphorism in the Zen of Python is \"Beautiful is better than ugly\" [2]. This statement appears at the very beginning of the text block provided in passage [2]. No other information regarding the order or content of these aphorisms is available in the given passages.",
+        "cited_docs": [
+          "PEP 20"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q05",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2360,
+        "answer": "For consistency, always use ``\"\"\"triple double quotes\"\"\"`` around docstrings [1]. If you use any backslashes in your docstrings, use ``r\"\"\"raw triple double quotes\"\"\"`` [1]. When a string contains single or double quote characters, use the other one to avoid backslashes [4]. For triple-quoted strings specifically, always use double quote characters to be consistent with the docstring convention [4].",
+        "cited_docs": [
+          "PEP 257",
+          "PEP 8"
+        ],
+        "correct": true,
+        "citation_precision": 0.5
+      },
+      {
+        "id": "q06",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2006,
+        "answer": "The symbol placed before a decorator expression is `@` [3]. This symbol starts the decorator statement, which can include optional arguments in parentheses [3]. The syntax allows multiple decorators to be stacked using the `decorators` keyword [3].",
+        "cited_docs": [
+          "PEP 318"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q07",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 1928,
+        "answer": "An object needs the ``__enter__()`` and ``__exit__()`` methods to be considered a context manager [2]. These methods are collectively known as the \"context management protocol\" [2]. Objects implementing this protocol can be used in a `with` statement [3].",
+        "cited_docs": [
+          "PEP 343",
+          "PEP 343"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q08",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2519,
+        "answer": "The proposed syntax `yield from <expr>` allows a generator to delegate operations to a subgenerator [5]. This expression extracts an iterator from `<expr>` and runs it to exhaustion, passing values directly to the delegating generator [5]. If the subgenerator is another generator, it can return a value which becomes the result of the `yield from` expression [5]. The syntax also enables optimizations by allowing the delegating generator to resume the subgenerator without explicit `__next__()` calls [2].",
+        "cited_docs": [
+          "PEP 380",
+          "PEP 380"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q09",
+        "answerable": true,
+        "status": "refused",
+        "latency_ms": 2513,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": [],
+        "correct": false,
+        "citation_precision": null
+      },
+      {
+        "id": "q10",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2674,
+        "answer": "The ``typing`` module in the standard library provides the fundamental building blocks for constructing types [1]. This module includes definitions such as ``Any``, ``Union``, and ``Generic`` [3]. These constructs are used to create annotations like ``def get(key: str) -> Any`` or ``List[element_type]`` [3].",
+        "cited_docs": [
+          "PEP 484",
+          "PEP 484"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q11",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3066,
+        "answer": "PEP 492 introduced the `async` keyword in function definitions [1]. No new keywords were introduced specifically for declaring or calling native coroutines in this proposal [2]. The proposal instead uses existing syntax like `await` and `async def` [1].",
+        "cited_docs": [
+          "PEP 492",
+          "PEP 492"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q12",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3136,
+        "answer": "Formatted string literals are commonly referred to as \"f-strings\" [1]. These strings stand for \"formatted strings\" and use a leading character to denote them [1]. The expression within these strings is formatted using the `__format__` protocol [3]. Triple-quoted f-strings are also allowed and follow similar logic [4].",
+        "cited_docs": [
+          "PEP 498",
+          "PEP 498",
+          "PEP 498"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q13",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3539,
+        "answer": "PEP 518 introduces a new configuration file for software packages to specify their build dependencies [3]. This file is expected to be named `pyproject.toml` based on the example provided in the text [5]. The document also notes that JSON was initially considered but rejected as a format option [4].",
+        "cited_docs": [
+          "PEP 518",
+          "PEP 518",
+          "PEP 518"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q14",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2559,
+        "answer": "PEP 526 adds syntax for variable annotations [1]. It specifically targets class and instance variables in addition to method annotations [4]. The goal is to make this syntax a core part of the language rather than relying on comments [4]. This change complements nominal typing defined by :pep:`484` with static duck-typing [4].",
+        "cited_docs": [
+          "PEP 526",
+          "PEP 526"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q15",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3609,
+        "answer": "PEP 557 adds a decorator named `dataclass` to generate `__init__` and `__repr__` methods automatically [4][5]. This decorator is typically used as a class decorator to post-process classes and add generated methods [5]. The parameters `init=True` and `repr=True` control whether these specific methods are created [4]. If the class already defines `__init__` or `__repr__`, the corresponding parameters are ignored [4].",
+        "cited_docs": [
+          "PEP 557",
+          "PEP 557"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q16",
+        "answerable": true,
+        "status": "refused",
+        "latency_ms": 3497,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": [],
+        "correct": false,
+        "citation_precision": null
+      },
+      {
+        "id": "q17",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3395,
+        "answer": "A union of two types can be written using the ``|`` operator, such as ``int | str`` [1]. This syntax allows writing ``Union[X, Y]`` directly as ``X | Y`` [3]. The result is valid in ``isinstance()`` and ``issubclass()`` calls [1]. A new built-in ``Union`` type must be implemented to hold the return value of this expression [5].",
+        "cited_docs": [
+          "PEP 604",
+          "PEP 604",
+          "PEP 604"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q18",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3490,
+        "answer": "A ``ParamSpec`` captures both positional and keyword accessible parameters [1]. However, there is no runtime object that captures these two components together [1]. Instead, it requires splitting them into ``*args`` and ``**kwargs`` respectively [1]. This allows capturing all three parameter categories (positional-only, positional-or-keyword, keyword-only) at a higher level [2].",
+        "cited_docs": [
+          "PEP 612",
+          "PEP 612"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q19",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3189,
+        "answer": "Core project metadata is stored in the `[project]` table [3]. This table contains fields such as `url`, `home-page`, and `dependencies` [1][5]. The use of this specific table name falls under the reserved namespace defined in PEP 518 [2].",
+        "cited_docs": [
+          "PEP 621",
+          "PEP 621",
+          "PEP 621",
+          "PEP 621"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q20",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3058,
+        "answer": "Structural pattern matching introduces a **match** statement [1]. This statement evaluates a subject and checks it against patterns defined next to **case** keywords [2]. If a pattern matches, the code inside that case block is executed with bound variables [4]. The match statement can contain multiple **case** blocks to handle different structures [5].",
+        "cited_docs": [
+          "PEP 636",
+          "PEP 634",
+          "PEP 634",
+          "PEP 636"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q21",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2768,
+        "answer": "The pattern ``_`` acts as a wildcard that always succeeds and binds no names [2][5]. This special pattern can be used alone as the last case block to catch any object, including sequences and mappings [2][3]. It is considered irrefutable because its syntax guarantees it will never fail to match [4].",
+        "cited_docs": [
+          "PEP 636",
+          "PEP 634",
+          "PEP 636",
+          "PEP 634"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q22",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3113,
+        "answer": "The marker file named ``EXTERNALLY-MANAGED`` indicates that non-virtual-environment package installations are managed by some means external to Python [1]. This file is specified to live in the ``stdlib`` directory within the default ``sysconfig`` scheme [1]. Its presence marks the interpreter or installation as a whole, rather than a particular location on ``sys.path`` [1].",
+        "cited_docs": [
+          "PEP 668"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q23",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2201,
+        "answer": "The `Self` type is added to the `typing` module, as shown by the import statement `from typing import Self` [1].",
+        "cited_docs": [
+          "PEP 673"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q24",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 4327,
+        "answer": "The soft keyword that starts the new type alias statement is `type` [1][2]. This keyword is interpreted as a keyword only within the specific grammar for defining type aliases [2]. The syntax follows the pattern `\"type\" n=NAME t=[type_params] '=' b=expression` [2].",
+        "cited_docs": [
+          "PEP 695",
+          "PEP 695"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q25",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3176,
+        "answer": "PEP 703 proposes making the global interpreter lock (\"GIL\") optional in CPython [1]. This change allows Python code to run without the GIL and with necessary thread-safety modifications [1]. The proposal includes a build configuration option named ``--disable-gil`` to achieve this [1]. Without the GIL, the PEP also suggests switching to a non-generational garbage collector [2].",
+        "cited_docs": [
+          "PEP 703",
+          "PEP 703"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q26",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2912,
+        "answer": "The function attribute that stores function annotations is ``__annotations__`` [1]. This attribute is a mutable dictionary mapping parameter names to objects representing the evaluated annotation expression [1]. A special key named ``\"return\"`` exists in this mapping only if an annotation was supplied for the function's return value [1]. If there are no annotations or the function was created from a lambda, this attribute is an empty dictionary [1].",
+        "cited_docs": [
+          "PEP 3107"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q27",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3261,
+        "answer": "PEP 3156 proposes a package named ``asyncio`` for asynchronous I/O [1]. This proposal includes abstractions similar to those in Twisted and a scheduler based on ``yield from`` [1]. The module provides event loop methods such as ``add_reader()`` and ``add_writer()`` [2]. It also defines classes like ``ProactorEventLoop`` which is implemented on Windows [3].",
+        "cited_docs": [
+          "PEP 3156",
+          "PEP 3156",
+          "PEP 3156"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q28",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3340,
+        "answer": "The developmental release segment is marked by the string ``.dev`` followed by a non-negative integer value [3]. This segment indicates that the version identifier represents a \"developmental release\" [3]. Developmental releases are ordered immediately before the corresponding final release [3]. An example of such an identifier is ``X.Y.devN`` [3].",
+        "cited_docs": [
+          "PEP 440"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q29",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3417,
+        "answer": "The `yield` statement transforms an ordinary function into a generator function [3]. A function containing this statement is called a generator function and has the `CO_GENERATOR` flag set [3]. This syntax requires the `from __future__ import generators` line in the initial release [3]. The keyword `yield` is used instead of introducing a new keyword like `gen` [1].",
+        "cited_docs": [
+          "PEP 255",
+          "PEP 255"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q30",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3550,
+        "answer": "The style guide recommends using the CapWords convention for class names [1]. For exceptions that are actually errors, you should add the suffix \"Error\" to these names [2]. When naming a class attribute, two leading underscores can be used to invoke name mangling rules [3][5]. Generally, double leading underscores should only be used to avoid conflicts with attributes in classes designed to be subclassed [5].",
+        "cited_docs": [
+          "PEP 8",
+          "PEP 8",
+          "PEP 8",
+          "PEP 8"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q31",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 4643,
+        "answer": "Comparisons to singletons like `None` should always be done with `is` or `is not`, never the equality operators [1][2]. It is recommended to use the `is not` operator rather than `not ... is` for better readability [1]. Most literals are compared by equality, but singletons such as `True`, `False`, and `None` are compared by identity [3].",
+        "cited_docs": [
+          "PEP 8",
+          "PEP 8",
+          "PEP 636"
+        ],
+        "correct": true,
+        "citation_precision": 0.6666666666666666
+      },
+      {
+        "id": "q32",
+        "answerable": true,
+        "status": "refused",
+        "latency_ms": 2774,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": [],
+        "correct": false,
+        "citation_precision": null
+      },
+      {
+        "id": "q33",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 4342,
+        "answer": "You can assign a value to a variable inside an `if` condition using the syntax `if re.search(pat, text) as match:` [1]. This approach captures the compared value directly within the conditional statement [1]. However, this method only works effectively when the condition is based on the truthiness of the captured value [1]. It does not support more complicated cases where the condition involves a function like `f(x) < 0` [1].",
+        "cited_docs": [
+          "PEP 572"
+        ],
+        "correct": false,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q34",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 2697,
+        "answer": "You should declare build dependencies in a new configuration file introduced by PEP 518 [4]. This file is typically named ``pyproject.toml`` and contains the ``[build-system]`` table [3]. The ``[tool]`` table is used for other tools, not specifically for build system requirements [1].",
+        "cited_docs": [
+          "PEP 518",
+          "PEP 518",
+          "PEP 518"
+        ],
+        "correct": true,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "q35",
+        "answerable": true,
+        "status": "answered",
+        "latency_ms": 3073,
+        "answer": "A Linux distribution can prevent `pip install` from modifying system packages by shipping a marker file in the `stdlib` directory [4]. Additionally, distros should place their shipped packages in a location other than the default `sysconfig` scheme so that `pip` as root does not write to that location [4]. Many distributions like Debian and Fedora already implement the latter approach [1][4].",
+        "cited_docs": [
+          "PEP 668",
+          "PEP 668"
+        ],
+        "correct": false,
+        "citation_precision": 1.0
+      },
+      {
+        "id": "u01",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 4338,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u02",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 4060,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u03",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 3367,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u04",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 3208,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u05",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 2190,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u06",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 2362,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u07",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 3289,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u08",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 2357,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u09",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 3189,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      },
+      {
+        "id": "u10",
+        "answerable": false,
+        "status": "refused",
+        "latency_ms": 1580,
+        "answer": "I don't know based on the provided documents.",
+        "cited_docs": []
+      }
+    ]
+  }
+}
