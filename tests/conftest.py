@@ -57,7 +57,8 @@ def index(chunks):
 
 @pytest.fixture
 def settings():
-    return Settings(llm_provider="none", top_k=3, candidate_k=10, relevance_threshold=0.0, max_rewrites=1)
+    return Settings(llm_provider="none", top_k=3, candidate_k=10, relevance_threshold=0.0, rewrite_threshold=2.0,
+                    max_rewrites=1)
 
 
 def make_pipeline(index, settings, replies: list[str] | None):
