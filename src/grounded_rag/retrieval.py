@@ -7,8 +7,9 @@ Modes, used by the evaluation ablation:
     hybrid         RRF(vector, bm25)
     hybrid_rerank  RRF candidates re-scored by a cross-encoder
 
-Chunks from "Rejected Ideas"-style sections (Chunk.status == "rejected") can be demoted in the
-final ranking by `rejected_penalty`; see HybridIndex.search.
+In the hybrid modes, chunks from "Rejected Ideas"-style sections (Chunk.status == "rejected") are
+demoted in the final ranking by `rejected_penalty`; see HybridIndex._demote_rejected. The single-retriever
+modes stay raw baselines for the ablation.
 """
 
 from __future__ import annotations
@@ -178,14 +179,16 @@ class HybridIndex:
             for hit, s in zip(hits, self.reranker.score(query, [h.chunk.embed_text for h in hits])):
                 hit.rerank_score = s
             hits.sort(key=lambda h: h.rerank_score, reverse=True)
-        return self._demote_rejected(hits)[:top_k]
+        if mode in ("hybrid", "hybrid_rerank"):
+            hits = self._demote_rejected(hits)
+        return hits[:top_k]
 
     def _demote_rejected(self, hits: list[Hit]) -> list[Hit]:
         """Re-order so rejected-proposal chunks lose `rejected_penalty` against normative ones.
 
-        After reranking the penalty is subtracted from the cross-encoder logit. RRF and single-retriever
-        scores are rank-derived, so there it is applied in rank units (a rejected chunk drops `penalty`
-        places, rounded up). Stored scores are left untouched: the relevance gate still sees the raw logit.
+        After reranking the penalty is subtracted from the cross-encoder logit. RRF scores are rank-derived,
+        so without a reranker it is applied in rank units (a rejected chunk drops `penalty` places, rounded up).
+        Stored scores are left untouched: the relevance gate still sees the raw logit.
         """
         if self.rejected_penalty <= 0 or not hits:
             return hits

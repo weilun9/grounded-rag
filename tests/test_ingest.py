@@ -56,7 +56,9 @@ def test_markdown_heading_levels_nest():
 @pytest.mark.parametrize(("path", "status"), [
     (["Rejected Ideas", "Using as"], "rejected"),
     (["Rejected alternative proposals"], "rejected"),
-    (["Rationale", "Alternative spellings"], "rejected"),
+    (["Alternatives"], "rejected"),
+    (["Alternative Proposals"], "rejected"),
+    (["Syntax Alternatives", "Why @?"], "normative"),  # PEP 318 surveys options, including the adopted one
     (["Abandoned approaches"], "rejected"),
     (["Deferred Ideas"], "rejected"),
     (["Specification", "Deferred Reference Counting"], "normative"),  # PEP 703 design term

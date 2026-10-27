@@ -65,14 +65,21 @@ def test_small_penalty_keeps_a_clearly_better_rejected_chunk_on_top(rejected_chu
 
 def test_penalty_in_rank_places_without_reranker(rejected_chunks):
     idx = make_index(rejected_chunks, 0.0)
-    raw = [h.chunk.chunk_id for h in idx.search(QUESTION, mode="bm25", top_k=5)]
+    raw = [h.chunk.chunk_id for h in idx.search(QUESTION, mode="hybrid", top_k=5)]
     idx.rejected_penalty = 1.0
-    demoted = [h.chunk.chunk_id for h in idx.search(QUESTION, mode="bm25", top_k=5)]
+    demoted = [h.chunk.chunk_id for h in idx.search(QUESTION, mode="hybrid", top_k=5)]
     rejected_id = next(c.chunk_id for c in rejected_chunks if c.status == "rejected")
     i = raw.index(rejected_id)
     assert i < len(raw) - 1  # it has someone to drop below
     assert demoted.index(rejected_id) == i + 1
     assert sorted(demoted) == sorted(raw)
+
+
+@pytest.mark.parametrize("mode", ["vector", "bm25"])
+def test_single_retriever_modes_are_not_penalised(rejected_chunks, mode):
+    raw = [h.chunk.chunk_id for h in make_index(rejected_chunks, 0.0).search(QUESTION, mode=mode, top_k=5)]
+    penalised = [h.chunk.chunk_id for h in make_index(rejected_chunks, 5.0).search(QUESTION, mode=mode, top_k=5)]
+    assert penalised == raw
 
 
 def test_status_survives_build_and_load_and_reaches_chroma(rejected_chunks, tmp_path):

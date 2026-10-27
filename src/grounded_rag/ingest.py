@@ -22,10 +22,12 @@ _RST_HEADING = re.compile(r"^(?P<title>[^\n]+)\n(?P<under>([=\-~^\"'`#*+])\3{2,}
 _MD_HEADING = re.compile(r"^(?P<hashes>#{1,6})\s+(?P<title>.+)$", re.MULTILINE)
 _PEP_HEADER = re.compile(r"^(?P<key>[A-Z][\w-]*):\s*(?P<value>.*)$")
 # Sections that describe ideas the document did NOT adopt. Matched against the heading and all its ancestors,
-# so "Rejected Ideas > Alternative spellings > Using `as`" is caught as well. "Deferred" only counts as
-# "Deferred ideas/proposals/..." because PEP 703 uses "Deferred Reference Counting" as a design term.
+# so "Rejected Ideas > Using `as`" is caught as well. Two words are narrowed to avoid design-term hits:
+# "Alternative(s)" only as the heading's first word (PEP 318's "Syntax Alternatives" surveys the options and
+# explains the adopted @ syntax), and "Deferred" only as "Deferred ideas/proposals/..." (PEP 703's
+# "Deferred Reference Counting" is part of the design).
 _REJECTED_HEADING = re.compile(
-    r"\b(rejected|abandoned|alternatives?)\b|\bdeferred\s+(ideas?|proposals?|features?|items?)\b|^deferred$",
+    r"\b(rejected|abandoned)\b|^alternatives?\b|\bdeferred\s+(ideas?|proposals?|features?|items?)\b|^deferred$",
     re.IGNORECASE,
 )
 
