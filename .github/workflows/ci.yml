@@ -46,6 +46,7 @@ jobs:
         run: |
           python -m grounded_rag ingest
           python -m grounded_rag eval --retrieval-only | tee -a "$GITHUB_STEP_SUMMARY"
+          python eval/_dump_candidates.py
 
   docker:
     needs: test
