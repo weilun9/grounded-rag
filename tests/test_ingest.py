@@ -1,6 +1,8 @@
-from grounded_rag.ingest import _parse_pep_header, chunk_documents, split_sections
+import pytest
 
-from .conftest import DOCS
+from grounded_rag.ingest import _parse_pep_header, chunk_documents, section_status, split_section_paths, split_sections
+
+from .conftest import DOCS, REJECTED_DOC
 
 
 def test_pep_header_is_parsed_and_stripped():
@@ -38,3 +40,33 @@ def test_chunk_ids_are_unique_and_stable():
     b = chunk_documents(DOCS, chunk_size=300, chunk_overlap=0)
     assert [c.chunk_id for c in a] == [c.chunk_id for c in b]
     assert len({c.chunk_id for c in a}) == len(a)
+
+
+def test_section_paths_track_parent_headings():
+    paths = [path for path, _ in split_section_paths(REJECTED_DOC.body)]
+    assert paths == [["Specification"], ["Rejected Ideas", "Using ``as`` in conditions"],
+                     ["Deferred Reference Counting"]]
+
+
+def test_markdown_heading_levels_nest():
+    paths = [p for p, _ in split_section_paths("# Rejected Ideas\n\n## Use as\ntext\n\n# Spec\nmore text")]
+    assert paths == [["Rejected Ideas", "Use as"], ["Spec"]]
+
+
+@pytest.mark.parametrize(("path", "status"), [
+    (["Rejected Ideas", "Using as"], "rejected"),
+    (["Rejected alternative proposals"], "rejected"),
+    (["Rationale", "Alternative spellings"], "rejected"),
+    (["Abandoned approaches"], "rejected"),
+    (["Deferred Ideas"], "rejected"),
+    (["Specification", "Deferred Reference Counting"], "normative"),  # PEP 703 design term
+    (["Specification", "Exceptional cases"], "normative"),
+])
+def test_section_status(path, status):
+    assert section_status(path) == status
+
+
+def test_chunks_from_rejected_subsections_are_tagged():
+    by_section = {c.section: c.status for c in chunk_documents([REJECTED_DOC], chunk_size=300, chunk_overlap=0)}
+    assert by_section == {"Specification": "normative", "Using ``as`` in conditions": "rejected",
+                          "Deferred Reference Counting": "normative"}

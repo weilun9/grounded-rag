@@ -33,6 +33,9 @@ class Settings:
     retrieval_mode: str = field(default_factory=lambda: _env("RAG_RETRIEVAL_MODE", "hybrid_rerank"))
     # Cross-encoder logit below which a passage is treated as irrelevant.
     relevance_threshold: float = field(default_factory=lambda: float(_env("RAG_RELEVANCE_THRESHOLD", "-2.0")))
+    # Demotion for chunks from rejected/alternative-proposal sections, in cross-encoder logits
+    # (in rank places for modes without a reranker). 0 disables it.
+    rejected_penalty: float = field(default_factory=lambda: float(_env("RAG_REJECTED_PENALTY", "2.0")))
     max_rewrites: int = field(default_factory=lambda: int(_env("RAG_MAX_REWRITES", "1")))
 
     # ollama | anthropic | openai | none (extractive, no LLM)

@@ -55,7 +55,11 @@ class RAGState(TypedDict, total=False):
 
 
 def format_context(hits: list[Hit]) -> str:
-    return "\n\n".join(f"[{i}] ({h.chunk.title} > {h.chunk.section})\n{h.chunk.text}" for i, h in enumerate(hits, 1))
+    return "\n\n".join(
+        f"[{i}] ({h.chunk.title} > {h.chunk.section}){' (rejected proposal)' if h.chunk.status == 'rejected' else ''}"
+        f"\n{h.chunk.text}"
+        for i, h in enumerate(hits, 1)
+    )
 
 
 def verify_citations(answer: str, n_passages: int) -> tuple[str, list[int], str]:

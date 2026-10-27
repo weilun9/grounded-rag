@@ -1,6 +1,8 @@
-from grounded_rag.graph import REFUSAL, verify_citations
+from grounded_rag.graph import REFUSAL, format_context, verify_citations
+from grounded_rag.ingest import chunk_documents
+from grounded_rag.retrieval import Hit
 
-from .conftest import make_pipeline
+from .conftest import REJECTED_DOC, make_pipeline
 
 
 def test_verify_keeps_valid_citations_and_strips_invalid_ones():
@@ -44,3 +46,11 @@ def test_extractive_mode_works_without_an_llm(index, settings):
     out = make_pipeline(index, settings, None).ask("How many spaces per indentation level?")
     assert out["status"] == "answered"
     assert "4 spaces" in out["answer"]
+
+
+def test_context_labels_rejected_proposals():
+    chunks = chunk_documents([REJECTED_DOC], chunk_size=300, chunk_overlap=0)
+    context = format_context([Hit(c, 0.0) for c in chunks])
+    assert "[1] (PEP 9001 – Inline Assignment > Specification)\n" in context
+    assert "[2] (PEP 9001 – Inline Assignment > Using ``as`` in conditions) (rejected proposal)\n" in context
+    assert context.count("(rejected proposal)") == 1

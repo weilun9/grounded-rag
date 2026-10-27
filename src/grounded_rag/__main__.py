@@ -51,7 +51,8 @@ def main(argv: list[str] | None = None) -> int:
         for h in load_index(settings).search(args.query, mode=args.mode or settings.retrieval_mode, top_k=args.k,
                                              candidate_k=settings.candidate_k):
             rr = "" if h.rerank_score is None else f" rerank={h.rerank_score:.2f}"
-            print(f"{h.chunk.doc_id:>9} | {h.chunk.section[:40]:<40} | rrf={h.score:.4f}{rr}")
+            status = " [rejected]" if h.chunk.status == "rejected" else ""
+            print(f"{h.chunk.doc_id:>9} | {h.chunk.section[:40]:<40} | rrf={h.score:.4f}{rr}{status}")
     elif args.cmd == "eval":
         from . import evaluate
         from .service import load_index, load_pipeline
