@@ -17,6 +17,12 @@ question ──► retrieve ──► grade ──(relevant)──► generate �
                             └──► refuse  (still nothing: no LLM call is made)
 ```
 
+| Answered, with a citation | Off-topic: rewritten once, then refused |
+|---|---|
+| ![Answer citing PEP 8 › Indentation](docs/img/answered.png) | !["I don't know based on the provided documents" after 0/5 relevant passages](docs/img/refused.png) |
+
+*The web UI (`python -m grounded_rag serve`) running on a local `qwen3.5:9b`. The bottom card is the pipeline trace. Add `?q=...` to the URL to ask a question directly.*
+
 ## Results
 
 45 questions (35 answerable, 10 unanswerable) over 29 documents / 1,571 chunks, run on a laptop
@@ -96,7 +102,7 @@ python -m grounded_rag ingest                           # build the index
 python -m grounded_rag ask "How can I assign a value inside an if condition?"
 python -m grounded_rag search "pyvenv.cfg" --mode bm25  # inspect retrieval only
 python -m grounded_rag eval --e2e                       # full evaluation report
-python -m grounded_rag serve                            # API + UI at http://127.0.0.1:8000
+python -m grounded_rag serve                            # API + UI at http://127.0.0.1:8000 (?q=... asks directly)
 ```
 
 Docker (talks to Ollama on the host by default):

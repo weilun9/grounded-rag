@@ -67,6 +67,9 @@ async function ask() {
     $('#out').innerHTML = `<div class="card"><span class="badge refused">error</span>${esc(String(err.message || err))}</div>`;
   } finally { $('#go').disabled = false; }
 }
+// ?q=... fills in the question and asks it, so an answer can be shared as a link
+const q0 = new URLSearchParams(location.search).get('q');
+if (q0) { $('#q').value = q0; ask(); }
 </script>
 </body>
 </html>
