@@ -135,7 +135,37 @@ precision, false-refusal rate, refusal rate on unanswerable questions, and p50 /
 A script checks that every gold key term really occurs in its labelled source document.
 
 CI runs lint and unit tests (no model downloads), then builds the real index and publishes the
-retrieval report to the job summary, and builds the Docker image.
+retrieval report to the job summary, runs the browser tests, and builds the Docker image.
+
+## Browser tests (Selenium)
+
+`tests/e2e/` drives the web UI in headless Chrome against a real uvicorn server on a free port. The server uses the
+same model-free pipeline as the unit tests (hash embeddings, token-overlap reranker, scripted LLM replies), so
+results are deterministic and nothing has to be downloaded. The tests go through a page object
+(`tests/e2e/pages.py`) and use explicit waits only, with no `sleep`. A failing test saves a screenshot to
+`e2e-artifacts/`, which CI uploads.
+
+They cover what the JSON API tests cannot see:
+
+| test | checks |
+|---|---|
+| health line | the `/health` fetch fills in corpus size, retrieval mode and LLM |
+| answered | the status badge, collapsed citations that expand on click, and the trace |
+| refused / ungrounded | off-corpus questions and uncited model answers both show the refusal with no citations |
+| HTML escaping | model output containing `<img onerror=…>` is shown as text and no script runs |
+| in-flight state | the Ask button is disabled while a slow model is answering, then re-enabled |
+| back-end down | a 503 shows an error badge and the UI recovers |
+| `?q=` deep link | the question is filled in and asked on load |
+| validation | the browser blocks a question under 3 characters and sends nothing |
+| mobile | no horizontal scroll at 375 px width |
+
+```bash
+pip install -e ".[dev,e2e]"
+pytest -m e2e                 # E2E_HEADED=1 to watch the browser
+```
+
+To confirm the suite catches real bugs, I removed `esc()` around the answer in `index.html`; the
+HTML-escaping test failed and saved a screenshot.
 
 ## Layout
 
@@ -149,6 +179,7 @@ src/grounded_rag/
   evaluate.py    retrieval ablation and end-to-end metrics
 eval/questions.jsonl, eval/results/
 tests/           unit tests with fake embeddings, reranker and LLM
+tests/e2e/       Selenium browser tests (page object, live uvicorn server)
 ```
 
 ## Limitations

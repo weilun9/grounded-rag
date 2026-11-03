@@ -28,6 +28,7 @@ dependencies = [
 anthropic = ["langchain-anthropic>=1.0"]
 openai = ["langchain-openai>=1.0"]
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+e2e = ["selenium>=4.20"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,6 +38,9 @@ grounded_rag = ["web/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Browser tests are opt-in: `pytest -m e2e` (needs Chrome and the e2e extra).
+addopts = "-m 'not e2e'"
+markers = ["e2e: end-to-end browser tests (Selenium + headless Chrome)"]
 
 [tool.ruff]
 line-length = 120

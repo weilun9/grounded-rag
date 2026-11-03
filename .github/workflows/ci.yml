@@ -47,6 +47,29 @@ jobs:
           python -m grounded_rag ingest
           python -m grounded_rag eval --retrieval-only | tee -a "$GITHUB_STEP_SUMMARY"
 
+  e2e:
+    # Selenium against a live uvicorn server, headless Chrome (preinstalled on the runner). No model downloads.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev,e2e]"
+      - name: Browser tests
+        run: pytest -m e2e -v
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: e2e-artifacts/
+
   docker:
     needs: test
     runs-on: ubuntu-latest
