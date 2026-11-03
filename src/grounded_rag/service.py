@@ -27,13 +27,15 @@ def build_index(settings: Settings | None = None) -> tuple[HybridIndex, dict]:
     if not docs:
         raise SystemExit(f"No documents found in {s.corpus_dir}")
     chunks = chunk_documents(docs, s.chunk_size, s.chunk_overlap)
-    index = HybridIndex.build(chunks, _embeddings(s.embed_model), s.index_dir, reranker=_reranker(s.rerank_model))
+    index = HybridIndex.build(chunks, _embeddings(s.embed_model), s.index_dir, reranker=_reranker(s.rerank_model),
+                              rejected_penalty=s.rejected_penalty)
     return index, {"documents": len(docs), "chunks": len(chunks), "index_dir": str(s.index_dir)}
 
 
 def load_index(settings: Settings | None = None) -> HybridIndex:
     s = settings or get_settings()
-    return HybridIndex.load(s.index_dir, _embeddings(s.embed_model), reranker=_reranker(s.rerank_model))
+    return HybridIndex.load(s.index_dir, _embeddings(s.embed_model), reranker=_reranker(s.rerank_model),
+                            rejected_penalty=s.rejected_penalty)
 
 
 def load_pipeline(settings: Settings | None = None) -> RAGPipeline:
