@@ -21,6 +21,11 @@ SUPPORTED = {".rst", ".md", ".txt", ".pdf"}
 _RST_HEADING = re.compile(r"^(?P<title>[^\n]+)\n(?P<under>([=\-~^\"'`#*+])\3{2,})[ \t]*$", re.MULTILINE)
 _MD_HEADING = re.compile(r"^#{1,6}\s+(?P<title>.+)$", re.MULTILINE)
 _PEP_HEADER = re.compile(r"^(?P<key>[A-Z][\w-]*):\s*(?P<value>.*)$")
+# Sections whose content is NOT what the document ends up proposing ("Rejected Ideas",
+# "Rejected alternative proposals", "Rejected/Postponed Proposals", ...). Matched against the
+# whole heading path, so a subsection like "Special-casing conditional statements" under
+# "Rejected alternative proposals" is caught too.
+_REJECTED_SECTION = re.compile(r"\b(rejected|abandoned|postponed|withdrawn)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -32,6 +37,9 @@ class Chunk:
     text: str
     source: str
     position: int
+    # True when the chunk sits under a "Rejected ..." heading: the passage describes an idea the
+    # document turned down. Defaults to False so indexes written before this field still load.
+    rejected: bool = False
 
     @property
     def embed_text(self) -> str:
@@ -95,22 +103,48 @@ def load_corpus(corpus_dir: Path) -> list[Document]:
     return [load_document(p) for p in paths]
 
 
-def split_sections(body: str) -> list[tuple[str, str]]:
-    """Return [(heading, text)] in document order. Text before the first heading is 'Preamble'."""
-    marks = [(m.start(), m.end(), m["title"].strip()) for m in _RST_HEADING.finditer(body)]
+def _heading_marks(body: str) -> list[tuple[int, int, str, int]]:
+    """[(start, end, title, level)] for every heading. RST levels follow the order in which underline
+    characters first appear (that is how reStructuredText itself assigns them); Markdown uses the # count."""
+    marks: list[tuple[int, int, str, int]] = []
+    levels: dict[str, int] = {}
+    for m in _RST_HEADING.finditer(body):
+        level = levels.setdefault(m["under"][0], len(levels))
+        marks.append((m.start(), m.end(), m["title"].strip(), level))
     if not marks:
-        marks = [(m.start(), m.end(), m["title"].strip()) for m in _MD_HEADING.finditer(body)]
-    sections: list[tuple[str, str]] = []
-    prev_end, prev_title = 0, "Preamble"
-    for start, end, title in marks:
+        for m in _MD_HEADING.finditer(body):
+            level = len(m.group(0)) - len(m.group(0).lstrip("#")) - 1
+            marks.append((m.start(), m.end(), m["title"].strip(), level))
+    return marks
+
+
+def split_sections_with_path(body: str) -> list[tuple[list[str], str]]:
+    """Return [(heading_path, text)] in document order, e.g. (["Rejected Ideas", "Using as"], "...").
+    Text before the first heading has the path ["Preamble"]."""
+    sections: list[tuple[list[str], str]] = []
+    stack: list[tuple[int, str]] = []  # (level, title) of the enclosing headings
+    prev_end, prev_path = 0, ["Preamble"]
+    for start, end, title, level in _heading_marks(body):
         chunk = body[prev_end:start].strip()
         if chunk:
-            sections.append((prev_title, chunk))
-        prev_end, prev_title = end, title
+            sections.append((prev_path, chunk))
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        stack.append((level, title))
+        prev_end, prev_path = end, [t for _, t in stack]
     tail = body[prev_end:].strip()
     if tail:
-        sections.append((prev_title, tail))
+        sections.append((prev_path, tail))
     return sections
+
+
+def split_sections(body: str) -> list[tuple[str, str]]:
+    """Return [(heading, text)] in document order. Text before the first heading is 'Preamble'."""
+    return [(path[-1], text) for path, text in split_sections_with_path(body)]
+
+
+def is_rejected_section(path: list[str]) -> bool:
+    return any(_REJECTED_SECTION.search(h) for h in path)
 
 
 def chunk_documents(docs: list[Document], chunk_size: int = 1000, chunk_overlap: int = 150) -> list[Chunk]:
@@ -118,7 +152,8 @@ def chunk_documents(docs: list[Document], chunk_size: int = 1000, chunk_overlap:
     chunks: list[Chunk] = []
     for doc in docs:
         position = 0
-        for section, text in split_sections(doc.body):
+        for path, text in split_sections_with_path(doc.body):
+            section, rejected = path[-1], is_rejected_section(path)
             for piece in splitter.split_text(text):
                 if len(piece.strip()) < 40:  # stray underline fragments, lone references
                     continue
@@ -132,6 +167,7 @@ def chunk_documents(docs: list[Document], chunk_size: int = 1000, chunk_overlap:
                         text=piece.strip(),
                         source=doc.source,
                         position=position,
+                        rejected=rejected,
                     )
                 )
                 position += 1

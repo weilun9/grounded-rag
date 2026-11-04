@@ -63,3 +63,27 @@ def settings():
 def make_pipeline(index, settings, replies: list[str] | None):
     llm = FakeListChatModel(responses=replies) if replies is not None else None
     return RAGPipeline(index, llm, settings)
+
+
+class ScriptedLLM:
+    """A stand-in chat model that records every prompt it is sent.
+
+    `reply` is either a list of strings returned in order, or a function prompt_text -> reply.
+    Only `invoke` is used by the pipeline, so nothing else of the chat-model interface is needed.
+    """
+
+    def __init__(self, reply):
+        self.reply = reply
+        self.prompts: list[str] = []
+
+    def invoke(self, messages):
+        from langchain_core.messages import AIMessage
+
+        text = messages if isinstance(messages, str) else "\n".join(m.content for m in messages)
+        self.prompts.append(text)
+        out = self.reply(text) if callable(self.reply) else self.reply[len(self.prompts) - 1]
+        return AIMessage(content=out)
+
+    @property
+    def generation_prompts(self) -> list[str]:
+        return [p for p in self.prompts if p.startswith("You answer questions")]
