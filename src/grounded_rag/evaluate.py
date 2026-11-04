@@ -57,7 +57,8 @@ def eval_e2e(pipeline: RAGPipeline, questions: list[dict]) -> dict:
         answer = out["answer"].lower()
         cited_docs = [c["doc_id"] for c in out["citations"]]
         row = {"id": q["id"], "answerable": q["answerable"], "status": out["status"],
-               "latency_ms": out["latency_ms"], "answer": out["answer"], "cited_docs": cited_docs}
+               "latency_ms": out["latency_ms"], "answer": out["answer"], "cited_docs": cited_docs,
+               "retrieved_docs": [h["doc_id"] for h in out["retrieved"]], "trace": out["trace"]}
         if q["answerable"]:
             # must_include is a list of groups; every group needs at least one of its alternatives
             row["correct"] = out["status"] == "answered" and all(
