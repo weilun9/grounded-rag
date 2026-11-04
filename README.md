@@ -61,10 +61,11 @@ GPU via Ollama. Full per-question reports in [`eval/results/`](eval/results).
 > **Provenance.** These numbers were produced at commit `ffed046`. Two later fixes change end-to-end behaviour
 > (the relevance gate now re-scores against the original question after a rewrite, and passages from "Rejected …"
 > sections are labelled in the prompt; see [`docs/error_analysis.md`](docs/error_analysis.md)). They do **not**
-> change retrieval rankings, so the retrieval table still holds; the end-to-end table needs a re-run
-> (`python -m grounded_rag eval --e2e`) before it describes the current code. The BM25 row and the
-> 29 / 1,571 corpus figures are reproduced offline by the test suite; every end-to-end figure recomputes exactly
-> from the per-question rows in the JSON files (`tests/test_eval_data.py`).
+> change retrieval rankings: CI's `retrieval-eval` job rebuilt the real index on the current code and reproduced
+> the retrieval table below exactly, misses included. The end-to-end table needs a re-run
+> (`python -m grounded_rag eval --e2e`) before it describes the current code. The 29 / 1,571 corpus figures are
+> checked by the test suite, and every end-to-end figure recomputes exactly from the per-question rows in the JSON
+> files (`tests/test_eval_data.py`).
 
 **Retrieval ablation** (doc-level, top 5; embeddings `bge-small-en-v1.5`, reranker `ms-marco-MiniLM-L-6-v2`)
 
