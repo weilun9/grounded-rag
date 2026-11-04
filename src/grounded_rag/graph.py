@@ -101,6 +101,12 @@ class RAGPipeline:
         if self.index.reranker is None:
             relevant = hits
         else:
+            # The gate must judge passages against what the user asked. In hybrid_rerank mode the hits
+            # already carry a cross-encoder score, but against the *search query*; after a rewrite that is
+            # the model's rewritten query, which can drag off-topic questions into the corpus vocabulary.
+            if state["query"] != state["question"]:
+                for h in hits:
+                    h.rerank_score = None
             self.index.score_relevance(state["question"], hits)
             relevant = [h for h in hits if h.rerank_score is not None and h.rerank_score >= self.s.relevance_threshold]
         return {"relevant": relevant, "trace": state["trace"] + [f"grade -> {len(relevant)}/{len(hits)} relevant"]}
