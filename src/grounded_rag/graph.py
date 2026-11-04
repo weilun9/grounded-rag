@@ -31,6 +31,8 @@ SYSTEM_PROMPT = f"""You answer questions using ONLY the numbered passages provid
 Rules:
 - Every sentence that states a fact must end with a citation like [1] or [2][3], pointing at the passage(s) that support it.
 - Do not use outside knowledge. If the passages do not contain the answer, reply exactly: {REFUSAL}
+- Passages marked REJECTED IDEA describe proposals the document turned down. Never present them as the answer;
+  mention them only to say they were rejected.
 - Be concise: at most 4 sentences. Quote code or identifiers exactly as they appear."""
 
 REWRITE_PROMPT = """Rewrite the user's question into a short search query for a keyword + semantic search engine
@@ -54,8 +56,15 @@ class RAGState(TypedDict, total=False):
     trace: list[str]
 
 
+REJECTED_TAG = "REJECTED IDEA, not part of the final proposal"
+
+
 def format_context(hits: list[Hit]) -> str:
-    return "\n\n".join(f"[{i}] ({h.chunk.title} > {h.chunk.section})\n{h.chunk.text}" for i, h in enumerate(hits, 1))
+    def label(h: Hit) -> str:
+        where = f"{h.chunk.title} > {h.chunk.section}"
+        return f"{where}; {REJECTED_TAG}" if h.chunk.rejected else where
+
+    return "\n\n".join(f"[{i}] ({label(h)})\n{h.chunk.text}" for i, h in enumerate(hits, 1))
 
 
 def verify_citations(answer: str, n_passages: int) -> tuple[str, list[int], str]:
